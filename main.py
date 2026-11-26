@@ -51,16 +51,29 @@ def check_text(text: str) -> None:
     assert "\n" not in text and "\r" not in text, "entry must be one line"
 
 
+def verify_written(target: Path, expected: str) -> None:
+    """Read back what landed on disk and confirm it is exactly the text.
+
+    One read, as bytes: byte-exact means the file holds the sentence
+    and nothing else — no trailing newline, no BOM, no padding.
+    """
+    raw = target.read_bytes()
+    assert raw == expected.encode("utf-8"), "entry.txt bytes differ from entry text"
+    text = raw.decode("utf-8")
+    assert text == expected, "entry.txt text differs from entry text"
+    assert 1 <= len(text) <= 200, "entry must be 1-200 characters"
+    # The file on disk itself must be exactly one sentence: a single
+    # terminal period, at the end, and no newlines.
+    assert text.count(".") == 1, "entry.txt must be exactly one sentence"
+    assert text.endswith("."), "entry.txt must end with its period"
+    assert "\n" not in text and "\r" not in text, "entry.txt must be one line"
+
+
 def main() -> None:
     check_text(ENTRY_TEXT)
     target = pick_output_folder() / "entry.txt"
     target.write_text(ENTRY_TEXT, encoding="utf-8", newline="")
-    # Read back what landed on disk and confirm it is exactly the text.
-    assert target.read_text(encoding="utf-8") == ENTRY_TEXT
-    assert 1 <= len(target.read_text(encoding="utf-8")) <= 200
-    # Byte-exact: the file must hold the sentence and nothing else —
-    # no trailing newline, no BOM, no padding.
-    assert target.stat().st_size == len(ENTRY_TEXT.encode("utf-8"))
+    verify_written(target, ENTRY_TEXT)
 
 
 if __name__ == "__main__":
